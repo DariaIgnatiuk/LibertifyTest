@@ -1,18 +1,18 @@
 import axios from "axios";
-import { useEffect, useState, useRef } from "react";
+import { useMemo, useEffect, useState, useRef } from "react";
 import { starWarsCharacterEmpty } from "../types.ts";
+import debounce from "lodash.debounce";
 const Search = () => {
   const [character, setCharacter] = useState(starWarsCharacterEmpty);
-  const [inputValue, setInputValue] = useState("");
   const [message, setMessage] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const apiSearch = async (): Promise<void> => {
+  const apiSearch = async (value:string): Promise<void> => {
     // search for character in API in the search query is londer than 1 character
-    if (inputValue.length > 1) {
+    if (value.length > 1) {
       try {
         const result = await axios.get(
-          `https://swapi.dev/api/people/?search=${inputValue}`
+          `https://swapi.dev/api/people/?search=${value}`
         );
         // if the seach was not successfulm show the error message
         if (result.data.count === 0) {
@@ -29,24 +29,33 @@ const Search = () => {
     }
   };
 
-  // handle input change and update search query
+  const onNameChange = useMemo(
+    () =>
+      debounce(() => {
+        handleChange();
+      }, 3000),
+    []
+   );
+
+   useEffect(() => {
+    return () => {
+      onNameChange.cancel();
+    };
+   }, [onNameChange]);
+
+  //handle input change and update search query
   const handleChange = () => {
-      setInputValue(inputRef.current?.value as string);
+    const value = inputRef.current?.value as string;
+      apiSearch(value);
 
   };
-
-  // search for the character with timeout 5 sec if inputValue changes
-  useEffect(() => {
-    setTimeout(() => {
-      apiSearch();
-    }, 5000);
-  }, [inputValue]);
 
   return (
     <>
       <br />
-      <input placeholder="Search..." onChange={handleChange} ref={inputRef} />
-      {!message && inputValue ? (
+      {/* <input placeholder="Search..." onChange={handleChange} ref={inputRef} /> */}
+      <input placeholder="Search..." onChange={onNameChange} ref={inputRef} />
+      {!message ? (
         <>
           <h2>{character.name}</h2>
           <p>
